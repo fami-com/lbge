@@ -1,15 +1,18 @@
 (in-package :lbge.math)
 
 (defclass floatn ()
-  ((in-vec
-    :initarg :in-vec
-    :accessor in-vec)))
+  ((size :initarg :size
+         :accessor float-size)
+   (in-vec
+     :initarg :in-vec
+     :accessor in-vec)))
 
 (defclass float2 (floatn)
-  ((in-vec
-    :initarg :in-vec
-    :accessor in-vec))
-  (:default-initargs :in-vec #(0 0)))
+  ((size :accessor float-size
+         :initform 2)
+   (in-vec
+     :initarg :in-vec
+     :accessor in-vec)))
 
 (defmacro float2-x (vec)
   `(aref (in-vec ,vec) 0))
@@ -18,10 +21,11 @@
   `(aref (in-vec ,vec) 1))
 
 (defclass float3 (floatn)
-  ((in-vec
-    :initarg :in-vec
-    :accessor in-vec))
-  (:default-initargs :in-vec #(0 0 0)))
+  ((size :accessor float-size
+         :initform 3)
+   (in-vec
+     :initarg :in-vec
+     :accessor in-vec)))
 
 (defmacro float3-x (vec)
   `(aref (in-vec ,vec) 0))
@@ -33,10 +37,11 @@
   `(aref (in-vec ,vec) 2))
 
 (defclass float4 (floatn)
-  ((in-vec
-    :initarg :in-vec
-    :accessor in-vec))
-  (:default-initargs :in-vec #(0 0 0 0)))
+  ((size :accessor float-size
+         :initform 4)
+   (in-vec
+     :initarg :in-vec
+     :accessor in-vec)))
 
 (defmacro float4-x (vec)
   `(aref (in-vec ,vec) 0))
@@ -107,13 +112,13 @@
 (defun float4-one () (make-float4 1 1 1 1))
 
 (defmethod print-object ((vec float4) out)
-  (format out "f4~S" (in-vec vec)))
+  (format out "~S" (in-vec vec)))
 
 (defmethod print-object ((vec float3) out)
-  (format out "f3~S" (in-vec vec)))
+  (format out "~S" (in-vec vec)))
 
 (defmethod print-object ((vec float2) out)
-  (format out "f2~S" (in-vec vec)))
+  (format out "~S" (in-vec vec)))
 
 (defmethod get-size ((vec float2))
   2)
@@ -146,6 +151,17 @@
 (define-vec-op div float2 #'/)
 (define-vec-op div float3 #'/)
 (define-vec-op div float4 #'/)
+
+(defmacro define-vec-num-op (name vec-type map-fun)
+  (flet ((body (func type)
+              `(make-instance ',type :in-vec
+                              (map 'vector ,func
+                                           (in-vec vec)))))
+     `(progn
+       (defmethod ,name ((value real) (vec ,vec-type))
+         ,(body `(ax:curry ,map-fun value) vec-type))
+       (defmethod ,name ((vec ,vec-type) (value real))
+         ,(body `(ax:rcurry ,map-fun value) vec-type)))))
 
 (defmacro define-vec-num-op (name vec-type map-fun)
   (flet ((body (func type)

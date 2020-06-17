@@ -40,3 +40,8 @@
 
 (defmacro macro-curry (func val &key (right nil))
   `(lambda (x) ,(if right `(,func x ,val) `(,func ,val x))))
+
+(defun genfuncs (funcname i &optional (j i) &key before after swapped)
+  (loop for v1 from 0 below i append
+   (loop for v2 from 0 below j collect
+    `(,funcname ,@before ,@(if swapped (list v2 v1) (list v1 v2)) ,@after))))

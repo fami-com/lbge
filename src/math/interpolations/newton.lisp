@@ -43,13 +43,12 @@
   (assert (>= (length coords) 3)
           nil
           "There must be at least 3 points to interpolate")
-  (let ((xs (list))
-        (ys (list)))
-      (loop for c across coords
-            do (progn
-                (append-to xs (float2-x c))
-                (append-to ys (float2-y c))))
-      (make-instance 'newton-interp :xs xs :divdiffs (calc-div-diffs xs ys))))
+  (loop for c in coords
+        collect (float2-x c) into xs
+        collect (float2-y c) into ys
+        finally (return (make-instance 'newton-interp
+                                       :xs xs
+                                       :divdiffs (calc-div-diffs xs ys)))))
 
 (defun make-newton (coords)
   (let ((newt (make-newton-raw coords)))
@@ -60,26 +59,39 @@
   (with-slots (xs divdiffs poly) interp
    (make-instance 'newton-interp
     :xs (copy-list xs)
-    :divdiffs (copy-list divdiffs)
+    :divdiffs (copy-tree divdiffs)
     :poly (make-polynomial (ax:copy-array (coeffs poly))))))
 
-(defmethod add-point-ip ((interp newton-interp) (x real) (y real))
-  (append-to (xs interp) x)
-  (append-to (first (divdiffs interp)) y)
-  (append-to (divdiffs interp) '())
-  (loop for o from 1 below (degree interp)
-        do (append-to (nth o (divdiffs interp))
-                      (div-diff (xs interp)
-                                (nth (1- o) (divdiffs interp))
-                                (- (degree interp) o 1)
-                                o)))
-  (setf (poly interp) (add (poly interp) (mul (calc-basis-polynomial interp
-                                                                     (1- (degree interp)))
-                                              (caar (last (divdiffs interp))))))
-  interp)
+(defmethod nadd-point ((interp newton-interp) (point float2))
+  (let ((x (float2-x point))
+        (y (float2-y point)))
+    (append-to (xs interp) x)
+    (append-to (first (divdiffs interp)) y)
+    (append-to (divdiffs interp) (list))
+    (loop for o from 1 below (degree interp)
+          do (append-to (nth o (divdiffs interp))
+                        (div-diff (xs interp)
+                                  (nth (1- o) (divdiffs interp))
+                                  (- (degree interp) o 1)
+                                  o)))
+    (setf (poly interp) (add (poly interp) (mul (calc-basis-polynomial interp
+                                                                       (1- (degree interp)))
+                                                (caar (last (divdiffs interp))))))
+    interp))
 
-(defmethod add-point ((interp newton-interp) (x real) (y real))
-  (add-point-ip (copy-newton-interp interp) x y))
+(defmethod add-point ((interp newton-interp) (point float2))
+  (nadd-point (copy-newton-interp interp) point))
 
-(defmethod call ((interp newton-interp) (x real))
-  (call (poly interp) x))
+(defmethod nadd-points ((interp newton-interp) (points list))
+  (loop for p in points
+        do (nadd-point interp p)
+        return interp))
+
+(defmethod add-points ((interp newton-interp) (points list))
+  (loop with interpc = (copy-newton-interp interp)
+        for p in points
+        do (nadd-point interpc p)
+        return interp))
+
+(defmethod call-at ((interp newton-interp) (x real))
+  (call-at (poly interp) x))

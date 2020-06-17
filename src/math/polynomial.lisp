@@ -78,7 +78,7 @@
                                    c)
                               (- deg n 1))))))
 
-(defmethod call ((poly polynomial) (x real))
+(defmethod call-at ((poly polynomial) (x real))
   (reduce #'+
     (loop for c across (coeffs poly)
           for n in (alexandria:iota (length (coeffs poly)))

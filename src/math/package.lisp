@@ -128,6 +128,8 @@
     ; exports from newton.lisp
     :make-newton
     :copy-newton-interp
-    :add-point-ip
+    :nadd-point
     :add-point
-    :call))
+    :nadd-points
+    :add-points
+    :call-at))

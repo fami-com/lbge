@@ -1,33 +1,44 @@
 (in-package :lbge.math)
 
 (defclass floatnxn ()
-  ((vector
+  ((size :initarg :size
+         :accessor matrix-size)
+   (in-vec
     :initarg :in-vec
     :accessor in-vec)))
 
 (defclass float2x2 (floatnxn)
-  ((vector
+  ((size :accessor matrix-size
+         :initform 2) ; don't change this
+   (in-vec
     :initarg :in-vec
-    :accessor in-vec
-    :initform #(0 0
-                0 0))))
+    :accessor in-vec)))
 
 (defclass float3x3 (floatnxn)
-  ((vector
+  ((size :accessor matrix-size
+         :initform 3) ; don't change this
+   (in-vec
     :initarg :in-vec
-    :accessor in-vec
-    :initform #(0 0 0
-                0 0 0
-                0 0 0))))
+    :accessor in-vec)))
 
 (defclass float4x4 (floatnxn)
-  ((vector
+  ((size :accessor matrix-size
+         :initform 4) ; don't change this
+   (in-vec
     :initarg :in-vec
-    :accessor in-vec
-    :initform #(0 0 0 0
-                0 0 0 0
-                0 0 0 0
-                0 0 0 0))))
+    :accessor in-vec)))
+
+(defmethod print-object ((mat float2x2) stream)
+  (loop
+    :for (a b) :on (coerce (in-vec mat) 'list)
+    :by #'cddr
+    :do (format stream "~A ~A~%" a b)))
+
+(defmethod print-object ((mat float3x3) stream)
+  (loop
+    :for (a b c) :on (coerce (in-vec mat) 'list)
+    :by #'cdddr
+    :do (format stream "~A ~A ~A~%" a b c)))
 
 (defmethod print-object ((mat float2x2) stream)
   (loop
@@ -47,40 +58,50 @@
     :by #'cddddr
     :do (format stream "~A ~A ~A ~A~%" a b c d)))
 
-(defun make-float2x2 (a00 &optional a01 a10 a11)
-  (if a11
-      (make-instance 'float2x2
-                     :in-vec (make-array '(4) :initial-contents
-                                         (vector a00 a01
-                                                 a10 a11)))
-      (make-instance 'float2x2
-                     :in-vec a00)))
-
-(defun make-float3x3 (a00 &optional a01 a02 a10 a11 a12 a20 a21 a22)
-  (if a22
-      (make-instance 'float3x3
-                     :in-vec (make-array '(9) :initial-contents
-                                         (vector a00 a01 a02
-                                                 a10 a11 a12
-                                                 a20 a21 a22)))
-      (make-instance 'float3x3
-                     :in-vec a00)))
-
-(defun make-float4x4 (a00 &optional a01 a02 a03 a10 a11 a12 a13 a20 a21 a22 a23 a30 a31 a32 a33)
-  (if a33
-      (make-instance 'float4x4
-                     :in-vec (make-array '(16) :initial-contents
-                                         (vector a00 a01 a02 a03
-                                                 a10 a11 a12 a13
-                                                 a20 a21 a22 a23
-                                                 a30 a31 a32 a33)))
-      (make-instance 'float4x4
-                     :in-vec a00)))
+(defun make-float2x2 (&optional a00 a01 a10 a11)
+  (cond ((null a00)
+         (make-instance 'float2x2 :in-vec #(make-array '(4)
+                                                       :initial-element 0.0f0)))
+        ((and a00 a01 a10 a11)
+         (make-instance 'float2x2
+                        :in-vec (vector a00 a01
+                                        a10 a11)))
+        (a00
+         (make-instance 'float2x2
+                        :in-vec a00))))
 
 
-(defun float2x2-zero () (make-instance 'float2x2))
-(defun float3x3-zero () (make-instance 'float3x3))
-(defun float4x4-zero () (make-instance 'float4x4))
+(defun make-float3x3 (&optional a00 a01 a02 a10 a11 a12 a20 a21 a22)
+  (cond ((null a00)
+         (make-instance 'float3x3 :in-vec (make-array '(9)
+                                                      :initial-element 0.0f0)))
+        ((and a00 a01 a02 a10 a11 a12 a20 a21 a22)
+         (make-instance 'float3x3
+                        :in-vec (vector a00 a01 a02
+                                        a10 a11 a12
+                                        a20 a21 a22)))
+        (a00
+         (make-instance 'float3x3
+                        :in-vec a00))))
+
+(defun make-float4x4 (&optional a00 a01 a02 a03 a10 a11 a12 a13 a20 a21 a22 a23 a30 a31 a32 a33)
+  (cond ((null a00)
+         (make-instance 'float4x4 :in-vec (make-array '(16)
+                                                      :initial-element 0.0f0)))
+        ((and a00 a01 a02 a03 a10 a11 a12 a13 a20 a21 a22 a23 a30 a31 a32 a33)
+         (make-instance 'float4x4
+                      :in-vec (vector a00 a01 a02 a03
+                                      a10 a11 a12 a13
+                                      a20 a21 a22 a23
+                                      a30 a31 a32 a33)))
+        (a00
+         (make-instance 'float4x4
+                      :in-vec a00))))
+
+
+(defun float2x2-zero () (make-float2x2))
+(defun float3x3-zero () (make-float3x3))
+(defun float4x4-zero () (make-float4x4))
 
 (defun float2x2-one () (make-float2x2 1 1
                                       1 1))
@@ -108,18 +129,20 @@
                                        0 0 0 1))
 
 
-(defmacro mat-size (matrix)
-  `(isqrt (length (in-vec ,matrix))))
-
 (defmacro get-at (matrix i j)
   `(aref (in-vec ,matrix)
-        (+ ,j (* ,i (mat-size ,matrix)))))
+        (+ ,j (* ,i (matrix-size ,matrix)))))
 
 (defmacro set-at (matrix i j v)
   `(setf (aref (in-vec ,matrix)
-          (+ ,j (* ,i (mat-size ,matrix))))
+          (+ ,j (* ,i (matrix-size ,matrix))))
          ,v))
 
+(defmacro swap-vals (matrix i1 j1 i2 j2)
+  `(rotatef (aref (in-vec ,matrix)
+                 (+ ,j1 (* ,i1 (matrix-size ,matrix))))
+            (aref (in-vec ,matrix)
+                 (+ ,j2 (* ,i2 (matrix-size ,matrix))))))
 
 (defmacro define-matrix-op (name result-type map-op)
   `(defmethod ,name ((matrix1 ,result-type) (matrix2 ,result-type))
@@ -127,6 +150,17 @@
                     (map 'vector ,map-op
                          (in-vec matrix1)
                          (in-vec matrix2)))))
+
+(defmacro define-matrix-num-op (name matrix-type map-fun)
+  (flet ((body (func type)
+              `(make-instance ',type :in-vec
+                              (map 'vector ,func
+                                           (in-vec matrix)))))
+     `(progn
+       (defmethod ,name ((value real) (matrix ,matrix-type))
+         ,(body `(ax:curry ,map-fun value) matrix-type))
+       (defmethod ,name ((matrix ,matrix-type) (value real))
+         ,(body `(ax:rcurry ,map-fun value) matrix-type)))))
 
 (defmacro define-matrix-num-op (name matrix-type map-fun)
   (flet ((body (func type)
@@ -166,12 +200,12 @@
 
 (defmacro get-row (matrix j)
   (let ((varname (gensym)))
-      `(loop for ,varname from 0 below (mat-size ,matrix)
+      `(loop for ,varname from 0 below (matrix-size ,matrix)
              collect (get-at ,matrix ,varname ,j))))
 
 (defmacro get-col (matrix i)
   (let ((varname (gensym)))
-      `(loop for ,varname from 0 below (mat-size ,matrix)
+      `(loop for ,varname from 0 below (matrix-size ,matrix)
              collect (get-at ,matrix ,i ,varname))))
 
 
@@ -211,119 +245,81 @@
 
 (defmethod mul ((matrix float2x2) (value float2))
   (make-float2
-   (reduce #'+
-           (loop for i from 0 to 1 collect
-                 (* (get-at matrix 0 i)
-                    (x value))))
-   (reduce #'+
-           (loop for i from 0 to 1 collect
-                 (* (get-at matrix 1 i)
-                    (y value))))))
+    (loop for i from 0 to 1 sum
+          (* (get-at matrix 0 i)
+             (x value)))
+    (loop for i from 0 to 1 sum
+          (* (get-at matrix 1 i)
+             (y value)))))
 
 (defmethod mul ((matrix float3x3) (value float3))
   (make-float3
-   (reduce #'+
-           (loop for i from 0 to 2 collect
-                 (* (get-at matrix 0 i)
-                    (x value))))
-   (reduce #'+
-           (loop for i from 0 to 2 collect
-                 (* (get-at matrix 1 i)
-                    (y value))))
-   (reduce #'+
-           (loop for i from 0 to 2 collect
-                 (* (get-at matrix 2 i)
-                    (z value))))))
+    (loop for i from 0 to 2 sum
+          (* (get-at matrix 0 i)
+             (x value)))
+    (loop for i from 0 to 2 sum
+          (* (get-at matrix 1 i)
+             (y value)))
+    (loop for i from 0 to 2 sum
+          (* (get-at matrix 2 i)
+             (z value)))))
 
 (defmethod mul ((matrix float4x4) (value float4))
   (make-float4
-   (reduce #'+
-           (loop for i from 0 to 3 collect
-                 (* (get-at matrix 0 i)
-                    (x value))))
-   (reduce #'+
-           (loop for i from 0 to 3 collect
-                 (* (get-at matrix 1 i)
-                    (y value))))
-   (reduce #'+
-           (loop for i from 0 to 3 collect
-                 (* (get-at matrix 2 i)
-                    (z value))))
-   (reduce #'+
-           (loop for i from 0 to 3 collect
-                 (* (get-at matrix 3 i)
-                    (w value))))))
+    (loop for i from 0 to 3 sum
+          (* (get-at matrix 0 i)
+             (x value)))
+    (loop for i from 0 to 3 sum
+          (* (get-at matrix 1 i)
+             (y value)))
+    (loop for i from 0 to 3 sum
+          (* (get-at matrix 2 i)
+             (z value)))
+    (loop for i from 0 to 3 sum
+          (* (get-at matrix 3 i)
+             (w value)))))
 
 
 (defmacro det2x2 (a11 a12 a21 a22)
   `(- (* ,a11 ,a22)
-     (* ,a12 ,a21)))
+      (* ,a12 ,a21)))
 
 (defmacro det3x3 (a11 a12 a13 a21 a22 a23 a31 a32 a33)
   `(- (+ (* ,a11
-           (det2x2 ,a22 ,a23
-                   ,a32 ,a33))
-        (* ,a13
-           (det2x2 ,a21 ,a22
-                   ,a31 ,a32)))
-     (* ,a12
-        (det2x2 ,a21 ,a23
-                ,a31 ,a33))))
+            (det2x2 ,a22 ,a23
+                    ,a32 ,a33))
+         (* ,a13
+            (det2x2 ,a21 ,a22
+                    ,a31 ,a32)))
+      (* ,a12
+         (det2x2 ,a21 ,a23
+                 ,a31 ,a33))))
 
 (defmacro det4x4 (a11 a12 a13 a14 a21 a22 a23 a24 a31 a32 a33 a34 a41 a42 a43 a44)
   `(- (+ (* ,a11
-           (det3x3 ,a22 ,a23 ,a24
-                   ,a32 ,a33 ,a34
-                   ,a42 ,a43 ,a44))
-        (* ,a13
-           (det3x3 ,a21 ,a22 ,a24
-                   ,a31 ,a32 ,a34
-                   ,a41 ,a42 ,a44)))
-     (+ (* ,a12
-           (det3x3 ,a21 ,a23 ,a24
-                   ,a31 ,a33 ,a34
-                   ,a41 ,a43 ,a44))
-        (* ,a14
-           (det3x3 ,a21 ,a22 ,a23
-                   ,a31 ,a32 ,a33
-                   ,a41 ,a42 ,a43)))))
+            (det3x3 ,a22 ,a23 ,a24
+                    ,a32 ,a33 ,a34
+                    ,a42 ,a43 ,a44))
+         (* ,a13
+            (det3x3 ,a21 ,a22 ,a24
+                    ,a31 ,a32 ,a34
+                    ,a41 ,a42 ,a44)))
+      (+ (* ,a12
+            (det3x3 ,a21 ,a23 ,a24
+                    ,a31 ,a33 ,a34
+                    ,a41 ,a43 ,a44))
+         (* ,a14
+            (det3x3 ,a21 ,a22 ,a23
+                    ,a31 ,a32 ,a33
+                    ,a41 ,a42 ,a43)))))
 
-; should be macros too I think
-(defmethod det ((matrix float2x2))
-  (det2x2 (get-at matrix 0 0)
-          (get-at matrix 0 1)
-          (get-at matrix 1 0)
-          (get-at matrix 1 1)))
-
-(defmethod det ((matrix float3x3))
-  (det3x3 (get-at matrix 0 0)
-          (get-at matrix 0 1)
-          (get-at matrix 0 2)
-          (get-at matrix 1 0)
-          (get-at matrix 1 1)
-          (get-at matrix 1 2)
-          (get-at matrix 2 0)
-          (get-at matrix 2 1)
-          (get-at matrix 2 2)))
-
-(defmethod det ((matrix float4x4))
-  (det4x4 (get-at matrix 0 0)
-          (get-at matrix 0 1)
-          (get-at matrix 0 2)
-          (get-at matrix 0 3)
-          (get-at matrix 1 0)
-          (get-at matrix 1 1)
-          (get-at matrix 1 2)
-          (get-at matrix 1 3)
-          (get-at matrix 2 0)
-          (get-at matrix 2 1)
-          (get-at matrix 2 2)
-          (get-at matrix 2 3)
-          (get-at matrix 3 0)
-          (get-at matrix 3 1)
-          (get-at matrix 3 2)
-          (get-at matrix 3 3)))
-
+(defmethod det ((matrix floatnxn))
+  (let* ((size (matrix-size matrix))
+         (data (coerce (in-vec matrix) 'list)))
+    (eval (ecase size
+           ((2) `(det2x2 ,@data))
+           ((3) `(det3x3 ,@data))
+           ((4) `(det4x4 ,@data))))))
 
 (define-matrix-unary-op absm float2x2 #'abs)
 (define-matrix-unary-op absm float3x3 #'abs)
@@ -333,28 +329,18 @@
 (define-matrix-unary-op negm float3x3 #'-)
 (define-matrix-unary-op negm float4x4 #'-)
 
-
-(defmethod transpose ((matrix float2x2))
-  (make-float2x2
-   (make-array '(4) :initial-contents
-               (vector (get-at matrix 0 0) (get-at matrix 1 0)
-                       (get-at matrix 0 1) (get-at matrix 1 1)))))
-
-(defmethod transpose ((matrix float3x3))
-  (make-float3x3
-   (make-array '(9) :initial-contents
-               (vector (get-at matrix 0 0) (get-at matrix 1 0) (get-at matrix 2 0)
-                       (get-at matrix 0 1) (get-at matrix 1 1) (get-at matrix 2 1)
-                       (get-at matrix 0 2) (get-at matrix 1 2) (get-at matrix 2 2)))))
-
-(defmethod transpose ((matrix float4x4))
-  (make-float4x4
-   (make-array '(16) :initial-contents
-               (vector (get-at matrix 0 0) (get-at matrix 1 0) (get-at matrix 2 0) (get-at matrix 3 0)
-                       (get-at matrix 0 1) (get-at matrix 1 1) (get-at matrix 2 1) (get-at matrix 3 1)
-                       (get-at matrix 0 2) (get-at matrix 1 2) (get-at matrix 2 2) (get-at matrix 3 2)
-                       (get-at matrix 0 3) (get-at matrix 1 3) (get-at matrix 2 3) (get-at matrix 3 3)))))
-
+(defmethod transpose ((*matrix* floatnxn))
+  (declare (special *matrix*))
+  (let* ((size (matrix-size *matrix*))
+         (data (coerce (mapcar #'eval
+                               (genfuncs 'get-at size size
+                                         :before '(*matrix*)
+                                         :swapped t))
+                       'vector)))
+    (ecase size
+     ((2) (make-float2x2 data))
+     ((3) (make-float3x3 data))
+     ((4) (make-float4x4 data)))))
 
 (defun eqm (matrix1 matrix2 &optional (eps +epsilon+))
   (reduce #'hand

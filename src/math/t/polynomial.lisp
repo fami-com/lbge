@@ -48,6 +48,6 @@
 (define-test polynomial-call-test
     (:lbge.math)
   (testing "Polynomial evaluation at a point"
-    (ok (= (call (make-polynomial 1 2 3 4)
+    (ok (= (call-at (make-polynomial 1 2 3 4)
                  1)
            10))))
